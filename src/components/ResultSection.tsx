@@ -1,6 +1,7 @@
-import { CheckCircle2, XCircle, Table, ListOrdered } from 'lucide-react';
+import { CheckCircle2, XCircle, Table, ListOrdered, AlertTriangle } from 'lucide-react';
 import { BankersResult } from '../utils/bankersAlgorithm';
 import { Badge } from './ui/badge';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 interface ResultSectionProps {
   result: BankersResult;
@@ -59,6 +60,49 @@ export function ResultSection({ result, numProcesses, numResources, maximum, all
             </div>
           </div>
         </div>
+
+        {/* Deadlock Details */}
+        {!result.isSafe && result.deadlockInfo && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+              <h3 className="text-slate-900">Deadlock Analysis</h3>
+            </div>
+            
+            <Alert className="border-red-300 bg-red-50">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <AlertTitle className="text-red-900">Why Deadlock Occurred</AlertTitle>
+              <AlertDescription className="text-red-800 mt-2">
+                <p className="mb-3">
+                  {result.deadlockInfo.remainingProcesses.length} process(es) are blocked and cannot proceed:
+                </p>
+                <div className="space-y-2">
+                  {result.deadlockInfo.blockedReasons.map(({ process, need, available }) => {
+                    const lackingResources: string[] = [];
+                    need.forEach((needVal, idx) => {
+                      if (needVal > available[idx]) {
+                        lackingResources.push(`R${idx} (needs ${needVal}, has ${available[idx]})`);
+                      }
+                    });
+                    
+                    return (
+                      <div key={process} className="bg-white/50 border border-red-200 rounded p-3">
+                        <p className="font-medium">Process P{process} blocked:</p>
+                        <p className="text-sm mt-1">
+                          Insufficient resources: {lackingResources.join(', ')}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="mt-3 text-sm">
+                  These processes are holding onto resources while waiting for others, 
+                  creating a circular wait condition that prevents any of them from completing.
+                </p>
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
 
         {/* Need Matrix Display */}
         <div>
@@ -136,27 +180,69 @@ export function ResultSection({ result, numProcesses, numResources, maximum, all
         {/* Execution Steps */}
         {result.steps.length > 0 && (
           <div>
-            <h3 className="text-slate-900 mb-3">Execution Steps</h3>
+            <h3 className="text-slate-900 mb-3">Execution Log</h3>
             <p className="text-sm text-slate-600 mb-4">
-              Detailed step-by-step analysis of the safety algorithm
+              {result.isSafe 
+                ? 'Detailed step-by-step analysis of the safety algorithm'
+                : 'Detailed log showing why the system entered an unsafe state'}
             </p>
             
-            <div className="space-y-2 max-h-96 overflow-y-auto border border-slate-200 rounded-lg p-4 bg-slate-50">
-              {result.steps.map((step, index) => (
-                <div
-                  key={index}
-                  className="bg-white border border-slate-200 rounded-lg p-3"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-sm">
-                      {index + 1}
+            <div className="space-y-2 max-h-[500px] overflow-y-auto border border-slate-200 rounded-lg p-4 bg-slate-50">
+              {result.steps.map((step, index) => {
+                // Check for special formatting
+                const isHeader = step.includes('Iteration') || step.includes('Initial');
+                const isSuccess = step.includes('✓');
+                const isFailed = step.includes('✗');
+                const isDeadlock = step.includes('DEADLOCK') || step.includes('⚠️');
+                const isDivider = step === '---';
+                const isIndented = step.startsWith('  ');
+                
+                if (isDivider) {
+                  return (
+                    <div key={index} className="border-t-2 border-slate-300 my-2"></div>
+                  );
+                }
+                
+                if (isDeadlock) {
+                  return (
+                    <div
+                      key={index}
+                      className="bg-red-100 border-2 border-red-400 rounded-lg p-3"
+                    >
+                      <p className="text-red-900 font-medium text-center">{step}</p>
                     </div>
-                    <div className="flex-1 text-sm">
-                      <p className="text-slate-900">{step}</p>
-                    </div>
+                  );
+                }
+                
+                return (
+                  <div
+                    key={index}
+                    className={`rounded-lg p-3 ${
+                      isHeader
+                        ? 'bg-blue-100 border border-blue-300'
+                        : isSuccess
+                        ? 'bg-green-50 border border-green-200'
+                        : isFailed
+                        ? 'bg-red-50 border border-red-200'
+                        : 'bg-white border border-slate-200'
+                    } ${isIndented ? 'ml-6' : ''}`}
+                  >
+                    <p
+                      className={`text-sm ${
+                        isHeader
+                          ? 'text-blue-900 font-medium'
+                          : isSuccess
+                          ? 'text-green-800'
+                          : isFailed
+                          ? 'text-red-800'
+                          : 'text-slate-700'
+                      }`}
+                    >
+                      {step}
+                    </p>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

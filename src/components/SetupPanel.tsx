@@ -59,7 +59,7 @@ export function SetupPanel({ numProcesses, numResources, onSetup, isLocked }: Se
           <p className="text-sm text-slate-500 mt-1">Max: 10</p>
         </div>
 
-        <div className="flex items-end ">
+        <div className="flex items-end">
           <Button
             onClick={handleSetup}
             disabled={isLocked}

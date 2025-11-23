@@ -4,6 +4,7 @@
   import path from 'path';
 
   export default defineConfig({
+    base: '/CS-327C-/',
     plugins: [react()],
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
